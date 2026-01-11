@@ -2,6 +2,7 @@ import numpy as np
 
 from ..core.base import SpectrumBase
 from ..core.exceptions import DimensionError
+from ..core.metadata import Metadata
 
 
 class Spectrum(SpectrumBase):
@@ -27,7 +28,7 @@ class Spectrum(SpectrumBase):
         self,
         x: np.ndarray | list,
         y: np.ndarray | list,
-        metadata: dict | None = None
+        metadata: Metadata | dict | None = None
     ):
         super().__init__(metadata=metadata)
         self._x: np.ndarray | None = None

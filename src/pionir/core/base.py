@@ -20,9 +20,11 @@ class SpectrumBase(ABC):
         If not provided during initialization, an empty metadata dictionary
         will be created.
     """
-    def __init__(self, metadata: dict | None = None):
+    def __init__(self, metadata: Metadata | dict | None = None):
         if metadata is None:
             self._metadata = Metadata()
+        elif isinstance(metadata, Metadata):
+            self._metadata = metadata
         else:
             self._metadata = Metadata(metadata)
 
