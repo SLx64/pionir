@@ -1,2 +1,3 @@
-def hello() -> str:
-    return "Hello from pionir!"
+from .core import Spectrum, SpectrumCollection
+
+__all__ = ["Spectrum", "SpectrumCollection"]
