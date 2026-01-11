@@ -1,7 +1,7 @@
 [project]
 name = "pionir"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Comprehensive Python Package for Near-Infrared Spectroscopy (NIR)."
 readme = "README.md"
 authors = [
     { name = "Lukas Schulig", email = "schuligl@uni-greifswald.de" }
