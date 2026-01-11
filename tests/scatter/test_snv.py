@@ -40,54 +40,34 @@ def test_snv_in_place():
     assert not np.array_equal(data, data_copy)
 
 
-def test_snv_spectrum():
-    x = np.linspace(0, 10, 100)
-    y = np.random.rand(100)
-    spec = Spectrum(x, y)
-    result = snv(spec)
+def test_snv_spectrum(sample_spectrum):
+    result = snv(sample_spectrum)
     assert isinstance(result, Spectrum)
     assert np.isclose(result.y.mean(), 0.0)
     assert np.isclose(result.y.std(), 1.0)
-    assert not np.isclose(spec.y.std(), 1.0)
+    assert not np.isclose(sample_spectrum.y.std(), 1.0)
 
 
-def test_snv_spectrum_in_place():
-    x = np.linspace(0, 10, 100)
-    y = np.random.rand(100)
-    spec = Spectrum(x, y)
-    result = snv(spec, in_place=True)
+def test_snv_spectrum_in_place(sample_spectrum):
+    result = snv(sample_spectrum, in_place=True)
     assert result is None
-    assert np.isclose(spec.y.mean(), 0.0)
-    assert np.isclose(spec.y.std(), 1.0)
+    assert np.isclose(sample_spectrum.y.mean(), 0.0)
+    assert np.isclose(sample_spectrum.y.std(), 1.0)
 
 
-def test_snv_collection():
-    x = np.linspace(0, 10, 100)
-    y1 = np.random.rand(100)
-    y2 = np.random.rand(100)
-    s1 = Spectrum(x, y1)
-    s2 = Spectrum(x, y2)
-    col = SpectrumCollection([s1, s2])
-    
-    result = snv(col)
+def test_snv_collection(sample_collection):
+    result = snv(sample_collection)
     assert isinstance(result, SpectrumCollection)
     assert np.allclose(result.y.mean(axis=1), 0.0)
     assert np.allclose(result.y.std(axis=1), 1.0)
-    assert not np.allclose(col.y.std(axis=1), 1.0)
+    assert not np.allclose(sample_collection.y.std(axis=1), 1.0)
 
 
-def test_snv_collection_in_place():
-    x = np.linspace(0, 10, 100)
-    y1 = np.random.rand(100)
-    y2 = np.random.rand(100)
-    s1 = Spectrum(x, y1)
-    s2 = Spectrum(x, y2)
-    col = SpectrumCollection([s1, s2])
-    
-    result = snv(col, in_place=True)
+def test_snv_collection_in_place(sample_collection):
+    result = snv(sample_collection, in_place=True)
     assert result is None
-    assert np.allclose(col.y.mean(axis=1), 0.0)
-    assert np.allclose(col.y.std(axis=1), 1.0)
+    assert np.allclose(sample_collection.y.mean(axis=1), 0.0)
+    assert np.allclose(sample_collection.y.std(axis=1), 1.0)
 
 
 def test_snv_transformer():
