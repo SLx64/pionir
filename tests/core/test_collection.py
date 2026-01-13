@@ -73,6 +73,7 @@ def test_collection_set_x_updates_spectra(
     for s in sample_collection:
         np.testing.assert_array_equal(s.x, new_x)
 
+
 def test_collection_average():
     x = np.linspace(0, 10, 100)
     y1 = np.random.rand(len(x))
