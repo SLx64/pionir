@@ -37,6 +37,7 @@ class SpectrumCollection(SpectrumBase):
         if spectra:
             for s in spectra:
                 self.append(s)
+            self._recalculate()
 
     def _recalculate(self):
         """
@@ -79,13 +80,14 @@ class SpectrumCollection(SpectrumBase):
             indicating invalid dimensional data.
         """
         if spectrum.x is None or spectrum.y is None:
-            raise DimensionError("Spectrum must have x and y values")
-        if self.x is None:
-            return True
-        if not np.array_equal(spectrum.x, self.x):
             return False
-        if len(self._spectra) > 0 and self._y is not None:
-            return spectrum.y.shape == self._y.shape[1]
+        if self._x is None:
+            return True
+        try:
+            if not np.allclose(spectrum.x, self._x):
+                return False
+        except ValueError:
+            return False
         return True
 
     @property
@@ -154,7 +156,7 @@ class SpectrumCollection(SpectrumBase):
             of spectra in the collection.
         """
         y = np.asarray(value).copy()
-        if self.y is None:
+        if not len(self._spectra):
             raise DimensionError("Cannot set y values on an empty collection.")
         if y.shape[0] != len(self._spectra):
             raise DimensionError(
@@ -204,6 +206,43 @@ class SpectrumCollection(SpectrumBase):
         self._x, self._y = None, None
         self.x = x
         self.y = y
+
+    def average(self) -> Spectrum:
+        """
+        Computes the average of the spectra stored in the collection.
+
+        If there is only one spectrum in the collection, it returns a copy
+        of that spectrum's data. If there are multiple spectra, the mean of
+        the `y` values across all spectra is computed.
+
+        Raises
+        ------
+        ValueError
+            If the collection is empty or contains spectra with no
+            valid data.
+
+        Returns
+        -------
+         Spectrum
+            The averaged spectrum, containing the averaged `y` values and
+            the corresponding `x` values.
+        """
+        if len(self._spectra) == 0:
+            raise ValueError("Cannot average an empty collection.")
+        if len(self._spectra) == 1:
+            s = self._spectra[0]
+            if s.x is None or s.y is None:
+                raise ValueError("Cannot average a spectrum with no data.")
+            return Spectrum(
+                x=s.x.copy(),
+                y=s.y.copy()
+            )
+        if self._x is None or self._y is None:
+            raise ValueError("Invalid data in collection.")
+        return Spectrum(
+            x=self._x.copy(),
+            y=self._y.mean(axis=0)
+        )
 
     def append(self, spectrum):
         """

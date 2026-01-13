@@ -72,3 +72,17 @@ def test_collection_set_x_updates_spectra(
     np.testing.assert_array_equal(sample_collection.x, new_x)
     for s in sample_collection:
         np.testing.assert_array_equal(s.x, new_x)
+
+def test_collection_average():
+    x = np.linspace(0, 10, 100)
+    y1 = np.random.rand(len(x))
+    y2 = np.random.rand(len(x))
+    mean = np.stack([y1, y2]).mean(axis=0)
+    s1 = Spectrum(x, y1)
+    s2 = Spectrum(x, y2)
+    collection = SpectrumCollection([s1, s2])
+
+    np.testing.assert_allclose(collection.average().y, mean)
+
+    with pytest.raises(ValueError):
+        SpectrumCollection().average()
