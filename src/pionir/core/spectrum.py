@@ -48,8 +48,7 @@ class Spectrum(SpectrumBase):
         Returns
         -------
         np.ndarray or None
-            The value of the `_x` attribute. If `_x` is not set,
-            it returns None.
+            The value of the `_x` attribute.
         """
         return self._x
 
@@ -79,15 +78,14 @@ class Spectrum(SpectrumBase):
         self._x = value
 
     @property
-    def y(self) -> np.ndarray | None:
+    def y(self) -> np.ndarray:
         """
         Gets the value of the y attribute.
 
         Returns
         -------
         np.ndarray or None
-            The value of the `_y` attribute. If `_y` is not set,
-            it returns None.
+            The value of the `_y` attribute.
         """
         return self._y
 
