@@ -1,4 +1,3 @@
-from copy import deepcopy
 from functools import singledispatch
 from typing import Any, Self, cast
 
@@ -6,6 +5,7 @@ import numpy as np
 
 from ..core.collection import SpectrumCollection
 from ..core.spectrum import Spectrum
+from ..core.transform import apply_transformation
 from ..core.typing import SpectrumLike
 from ..sklearn.utils import StatelessTransformer
 
@@ -45,6 +45,63 @@ def _extract_reference_array(data: SpectrumLike) -> np.ndarray:
             raise ValueError("Reference data must be a SpectrumLike object.")
 
 
+def _msc(
+    data: np.ndarray,
+    reference: np.ndarray,
+    in_place: bool = False
+) -> np.ndarray | None:
+    """
+    Applies Multiplicative Scatter Correction (MSC) to the input data in
+    relation to a reference.
+
+    MSC is a preprocessing technique used in spectroscopy to correct
+    multiplicative and additive variations within spectral data.
+    The method relies on linear regression to align the input data to a
+    given reference spectrum.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        The spectral data to be corrected. Can be either a 1D array
+        representing a single spectrum or a 2D array for multiple spectra.
+    reference : np.ndarray
+        The reference spectrum against which the data will be corrected.
+        It must match the dimensionality of individual spectra in `data`.
+    in_place : bool, optional
+        If True, the correction is performed on the input `data` array,
+        modifying it directly. Defaults to False, where the transformation
+        is computed without altering the input and a corrected copy is
+        returned.
+
+    Returns
+    -------
+    np.ndarray or None
+        If `in_place` is False, returns a corrected copy of the input data.
+        If `in_place` is True, the input data is modified in place, and the
+        function returns None.
+    """
+    if data.ndim == 1:
+        fit = np.polyfit(reference, data, 1)
+        if in_place:
+            data -= fit[1]
+            data /= fit[0]
+            return None
+        return (data - fit[1]) / fit[0]
+
+    if in_place:
+        for i in range(len(data)):
+            fit = np.polyfit(reference, data[i], 1)
+            data[i] -= fit[1]
+            data[i] /= fit[0]
+        return None
+
+    transformed = np.empty_like(data)
+    for i in range(len(data)):
+        fit = np.polyfit(reference, data[i], 1)
+        transformed[i] = (data[i] - fit[1]) / fit[0]
+    return transformed
+
+
 @singledispatch
 def msc(
     data: SpectrumLike,
@@ -52,11 +109,8 @@ def msc(
     in_place: bool = False
 ) -> SpectrumLike | None:
     """
-    Apply Multiplicative Scatter Correction (MSC) to spectral data.
-
-    This  method normalizes spectral data by adjusting for scattering effects,
-    using either a provided reference spectrum or calculating the mean
-    spectrum if no reference is supplied.
+    This function is a generic implementation allowing for the transformation
+    of data depending on its type.
 
     Parameters
     ----------
@@ -93,31 +147,7 @@ def _(
     if reference.shape[-1] != data.shape[-1]:
         raise ValueError(f"Data and reference must have the same length. "
                          f"({data.shape[-1]} != {reference.shape[-1]})")
-
-    # Fit each row of data against reference
-    # data is (N, samples) or (samples,)
-    # reference is (samples,)
-    if data.ndim == 1:
-        fit = np.polyfit(reference, data, 1)
-        if in_place:
-            data -= fit[1]
-            data /= fit[0]
-            return None
-        return (data - fit[1]) / fit[0]
-    
-    # For 2D data, we fit each row
-    if in_place:
-        for i in range(len(data)):
-            fit = np.polyfit(reference, data[i], 1)
-            data[i] -= fit[1]
-            data[i] /= fit[0]
-        return None
-    
-    corrected = np.empty_like(data)
-    for i in range(len(data)):
-        fit = np.polyfit(reference, data[i], 1)
-        corrected[i] = (data[i] - fit[1]) / fit[0]
-    return corrected
+    return _msc(data, reference, in_place)
 
 
 @msc.register(Spectrum)
@@ -128,13 +158,12 @@ def _(
 ) -> Spectrum | None:
     if reference is None:
         raise ValueError("Reference must be provided for a single Spectrum.")
-    if in_place:
-        corrected_y = cast(np.ndarray, msc(data.y, reference, in_place=False))
-        data.y = corrected_y
-        return None
-    new_spectrum = deepcopy(data)
-    msc(new_spectrum, reference, in_place=True)
-    return new_spectrum
+    return apply_transformation(
+        data=data,
+        transform_fn=_msc,
+        in_place=in_place,
+        reference=reference
+    )
 
 
 @msc.register(SpectrumCollection)
@@ -144,17 +173,13 @@ def _(
     in_place: bool = False
 ) -> SpectrumCollection | None:
     if reference is None:
-        reference = data.average().y
-    
-    if in_place:
-        # data.y returns a copy, so we must set it back after in-place modification
-        # OR we can just use the corrected array from non-in-place call
-        corrected_y = cast(np.ndarray, msc(data.y, reference, in_place=False))
-        data.y = corrected_y
-        return None
-    new_collection = deepcopy(data)
-    msc(new_collection, reference, in_place=True)
-    return new_collection
+        reference = _extract_reference_array(data)
+    return apply_transformation(
+        data=data,
+        transform_fn=_msc,
+        in_place=in_place,
+        reference=reference
+    )
 
 
 class MSCTransformer(StatelessTransformer):
@@ -168,7 +193,7 @@ class MSCTransformer(StatelessTransformer):
         The reference spectrum to which the input spectra are aligned.
     """
     def __init__(self, reference: SpectrumLike):
-        self.reference = reference
+        self.reference = _extract_reference_array(reference)
 
     def fit(self, X: np.ndarray, y: Any | None = None) -> Self:  # noqa: N803
         """
@@ -209,4 +234,4 @@ class MSCTransformer(StatelessTransformer):
             The output has the same shape as the input array `X`.
         """
         X = self._validate_X(X)  # noqa: N806
-        return cast(np.ndarray, msc(X, self.reference, in_place=False))
+        return cast(np.ndarray, _msc(X, self.reference, in_place=False))

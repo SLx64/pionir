@@ -1,4 +1,3 @@
-from copy import deepcopy
 from functools import singledispatch
 from typing import Any, Self, cast
 
@@ -6,8 +5,57 @@ import numpy as np
 
 from ..core.collection import SpectrumCollection
 from ..core.spectrum import Spectrum
+from ..core.transform import apply_transformation
 from ..core.typing import SpectrumLike
 from ..sklearn.utils import StatelessTransformer
+
+
+def _snv(
+    data: np.ndarray,
+    norm: bool = False,
+    in_place: bool = False
+) -> np.ndarray | None:
+    """
+    Applies the Standard Normal Variate (SNV) transformation to the input data.
+
+    This function standardizes the input data by removing the mean and scaling
+    by the standard deviation along the specified axis. The `norm` parameter
+    controls whether the mean subtraction is skipped, while the `in_place`
+    parameter allows modification of the input array directly.
+
+    SNV transformation formula:
+        For each row or data instance:
+            standardized = (row - mean) / std
+
+    Parameters
+    ----------
+    data : numpy.ndarray
+        The input array to be transformed. It can have any dimensionality.
+
+    norm : bool, optional
+        If True, the mean subtraction step is skipped, and only
+        standardization is applied using the standard deviation.
+        Defaults to False.
+
+    in_place : bool, optional
+        If True, the transformation is applied directly to the input data
+        array, modifying it. If False, a new transformed array is returned
+        without altering the original data. Defaults to False.
+
+    Returns
+    -------
+    numpy.ndarray or None
+        If `in_place` is False, returns a new array where the SNV
+        transformation has been applied. If `in_place` is True,
+        the function returns None.
+    """
+    mean = 0 if norm else data.mean(axis=data.ndim - 1, keepdims=True)
+    std = data.std(axis=data.ndim - 1, keepdims=True)
+    if in_place:
+        data -= mean
+        data /= std
+        return None
+    return (data - mean) / std
 
 
 @singledispatch
@@ -17,15 +65,8 @@ def snv(
     in_place: bool = False
 ) -> SpectrumLike | None:
     """
-    Apply Standard Normal Variate (SNV) transformation to input data.
-
     This function is a generic implementation allowing for the transformation
-    of data depending on its type. The SNV technique standardizes a matrix or
-    vector by centering and scaling.
-
-    SNV transformation formula:
-        For each row or data instance:
-            standardized = (row - mean) / std
+    of data depending on its type.
 
     Parameters
     ----------
@@ -59,13 +100,7 @@ def _(
     norm: bool = False,
     in_place: bool = False
 ) -> np.ndarray | None:
-    mean = 0 if norm else data.mean(axis=data.ndim - 1, keepdims=True)
-    std = data.std(axis=data.ndim - 1, keepdims=True)
-    if in_place:
-        data -= mean
-        data /= std
-        return None
-    return (data - mean) / std
+    return _snv(data, norm, in_place)
 
 
 @snv.register(Spectrum)
@@ -74,12 +109,12 @@ def _(
     norm: bool = False,
     in_place: bool = False
 ) -> Spectrum | None:
-    if in_place:
-        snv(data.y, norm, in_place=True)
-        return None
-    new_spectrum = deepcopy(data)
-    snv(new_spectrum.y, norm, in_place=True)
-    return new_spectrum
+    return apply_transformation(
+        data=data,
+        transform_fn=_snv,
+        in_place=in_place,
+        norm=norm
+    )
 
 
 @snv.register(SpectrumCollection)
@@ -88,12 +123,12 @@ def _(
     norm: bool = False,
     in_place: bool = False
 ) -> SpectrumCollection | None:
-    if in_place:
-        snv(data.y, norm, in_place=True)
-        return None
-    new_collection = deepcopy(data)
-    snv(new_collection.y, norm, in_place=True)
-    return new_collection
+    return apply_transformation(
+        data=data,
+        transform_fn=_snv,
+        in_place=in_place,
+        norm=norm
+    )
 
 
 class SNVTransformer(StatelessTransformer):
@@ -153,4 +188,4 @@ class SNVTransformer(StatelessTransformer):
             The output has the same shape as the input array `X`.
         """
         X = self._validate_X(X)  # noqa: N806
-        return cast(np.ndarray, snv(X, norm=self.norm, in_place=False))
+        return cast(np.ndarray, _snv(X, norm=self.norm, in_place=False))

@@ -78,10 +78,11 @@ def test_msc_spectrum_in_place(sample_spectrum):
 
 def test_msc_collection(sample_collection):
     reference = sample_collection.average().y
-    # Modify collection data
-    for s in sample_collection:
-        s.y = reference * 1.1 + 0.05
-    
+
+    sample_collection.y = np.array([
+        reference * 1.1 + 0.05 for _ in range(len(sample_collection))
+    ])
+
     result = msc(sample_collection, reference)
     
     assert isinstance(result, SpectrumCollection)
