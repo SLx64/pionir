@@ -3,8 +3,7 @@ import pytest
 
 from pionir.core.collection import SpectrumCollection
 from pionir.core.spectrum import Spectrum
-from pionir.scatter.msc import MSCTransformer, msc
-from pionir.scatter.msc import _extract_reference_array
+from pionir.scatter.msc import MSCTransformer, _extract_reference_array, msc
 
 
 def test_extract_reference_array(sample_spectrum, sample_collection):

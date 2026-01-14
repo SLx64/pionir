@@ -88,4 +88,4 @@ def test_snv_transformer_norm():
 
 def test_snv_not_implemented():
     with pytest.raises(NotImplementedError):
-        snv("not a spectrum")
+        snv("not a spectrum") # type: ignore
