@@ -34,22 +34,22 @@ class SpectrumBase(ABC):
 
     @property
     @abstractmethod
-    def x(self) -> np.ndarray | None:
+    def x(self) -> np.ndarray:
         pass
 
     @x.setter
     @abstractmethod
-    def x(self, value: np.ndarray | list):
+    def x(self, value: np.ndarray | list) -> None:
         pass
 
     @property
     @abstractmethod
-    def y(self) -> np.ndarray | None:
+    def y(self) -> np.ndarray:
         pass
 
     @y.setter
     @abstractmethod
-    def y(self, value: np.ndarray | list):
+    def y(self, value: np.ndarray | list) -> None:
         pass
 
     @abstractmethod
