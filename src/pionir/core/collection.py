@@ -2,10 +2,11 @@ from typing import Iterator
 
 import numpy as np
 
-from ..core.base import SpectrumBase
-from ..core.exceptions import DimensionError
-from ..core.metadata import Metadata
-from ..core.spectrum import Spectrum
+from .base import SpectrumBase
+from .exceptions import DimensionError
+from .metadata import Metadata
+from .spectrum import Spectrum
+from .utils import validate_wavelength
 
 
 class SpectrumCollection(SpectrumBase):
@@ -41,6 +42,36 @@ class SpectrumCollection(SpectrumBase):
 
     def _recalculate(self):
         """
+        Recalculates internal state variables.
+
+        This method triggers recalculations of internal `_x`and `_y`
+        attributes. It ensures that dependent internal states are updated
+        correctly based on changes in the system.
+
+        Notes
+        -----
+        This method is internal to the class and operates on
+        private attributes to maintain consistency.
+        """
+        self._recalculate_y()
+        self._recalculate_x()
+
+    def _recalculate_y(self):
+        """
+        Recalculates the internal state based on the current spectra.
+
+        This method calculates and updates the internal `_y` array depending
+        on the state of the `_stale` attribute.
+        """
+        if not len(self._spectra):
+            self._y = None
+            return
+
+        self._y = np.array([s.y for s in self._spectra])
+        self._stale = False
+
+    def _recalculate_x(self):
+        """
         Recalculates the internal state based on the current spectra.
 
         This method calculates and updates the internal `_y` array depending
@@ -48,50 +79,13 @@ class SpectrumCollection(SpectrumBase):
         """
         if not len(self._spectra):
             self._x = None
-            self._y = None
             return
 
-        self._y = np.array([s.y for s in self._spectra])
+        self._x = self._spectra[0].x
         self._stale = False
 
-    def _validate_dim(self, spectrum: Spectrum) -> bool:
-        """
-        Validates the dimensional compatibility of the given spectrum with
-        the current object. This method ensures that the x-axis and y-axis
-        dimensions of the input spectrum match or comply with the dimensional
-        requirements of the current object.
-
-        Parameters
-        ----------
-        spectrum : Spectrum
-            The spectrum object to validate. It should have valid x and y
-            attributes to represent the data.
-
-        Returns
-        -------
-        bool
-            True if the dimensions of the spectrum are compatible,
-            False otherwise.
-
-        Raises
-        ------
-        DimensionError
-            If the spectrum lacks x or y values, an error is raised
-            indicating invalid dimensional data.
-        """
-        if spectrum.x is None or spectrum.y is None:
-            return False
-        if self._x is None:
-            return True
-        try:
-            if not np.allclose(spectrum.x, self._x):
-                return False
-        except ValueError:
-            return False
-        return True
-
     @property
-    def x(self) -> np.ndarray | None:
+    def x(self) -> np.ndarray:
         """
         This property retrieves the value of the `_x` attribute if it has
         been set.
@@ -101,13 +95,16 @@ class SpectrumCollection(SpectrumBase):
         np.ndarray or None
             The value of the `_x` attribute.
         """
+        if self._x is None:
+            return np.array([])
         return self._x
 
     @x.setter
     def x(self, value: np.ndarray | list):
         """
-        Sets the x attribute with the given values and validates the
-        dimensions if the y attribute is not None.
+        Sets the x attribute with the given values and updates the x values
+        in all contained spectra. Dimension checks are performed on the
+        `Spectrum` objects before setting the new values.
 
         Parameters
         ----------
@@ -116,17 +113,12 @@ class SpectrumCollection(SpectrumBase):
             existing y attribute, if defined.
         """
         x = np.asarray(value).copy()
-        if self._y is not None and self._y.shape[1] != len(value):
-            raise DimensionError(
-                "Dimension of x values must match the dimensions of "
-                "y values"
-            )
-        self._x = x
         for spectrum in self._spectra:
             spectrum.x = x
+        self._x = x
 
     @property
-    def y(self) -> np.ndarray | None:
+    def y(self) -> np.ndarray:
         """
         This property retrieves the value of the `_y` attribute if it has
         been set. If the cached value is stale, it triggers a recalculation
@@ -139,7 +131,9 @@ class SpectrumCollection(SpectrumBase):
             None is returned.
         """
         if self._stale:
-            self._recalculate()
+            self._recalculate_y()
+        if self._y is None:
+            return np.array([])
         return self._y
 
     @y.setter
@@ -231,17 +225,13 @@ class SpectrumCollection(SpectrumBase):
             raise ValueError("Cannot average an empty collection.")
         if len(self._spectra) == 1:
             s = self._spectra[0]
-            if s.x is None or s.y is None:
-                raise ValueError("Cannot average a spectrum with no data.")
             return Spectrum(
                 x=s.x.copy(),
                 y=s.y.copy()
             )
-        if self._x is None or self._y is None:
-            raise ValueError("Invalid data in collection.")
         return Spectrum(
-            x=self._x.copy(),
-            y=self._y.mean(axis=0)
+            x=self.x.copy(),
+            y=self.y.mean(axis=0)
         )
 
     def append(self, spectrum):
@@ -264,9 +254,9 @@ class SpectrumCollection(SpectrumBase):
             Raised when the dimensions of the provided spectrum do not match
             the existing spectra.
         """
-        if not self._validate_dim(spectrum):
-            raise DimensionError("Spectrum dimensions do not match.")
-        if self._x is None:
+        if len(self._spectra):
+            validate_wavelength(spectrum, self)
+        else:
             self._x = spectrum.x.copy()
         self._spectra.append(spectrum)
         self._stale = True
@@ -290,12 +280,15 @@ class SpectrumCollection(SpectrumBase):
 
         Raises
         ------
+        WavelengthError
+            If the wavelengths of the two spectra do not match within
+            a specified tolerance.
         DimensionError
-            If the dimensions of the provided spectrum do not match the
-            expected dimensions.
+            If the dimensions of the spectra do not match.
+        KeyError
+            If the index is out of bounds.
         """
-        if not self._validate_dim(spectrum):
-            raise DimensionError("Spectrum dimensions do not match.")
+        validate_wavelength(spectrum, self)
         self._spectra[index] = spectrum
         self._stale = True
 

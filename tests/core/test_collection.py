@@ -59,8 +59,8 @@ def test_collection_dimension_error(sample_collection):
 def test_collection_empty():
     c = SpectrumCollection()
     assert len(c) == 0
-    assert c.x is None
-    assert c.y is None
+    np.testing.assert_array_equal(c.x, np.array([]))
+    np.testing.assert_array_equal(c.y, np.array([]))
 
 
 def test_collection_set_x_updates_spectra(
