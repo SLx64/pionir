@@ -17,9 +17,9 @@ class Spectrum(SpectrumBase):
 
     Attributes
     ----------
-    x : numpy.ndarray or None
+    _x : numpy.ndarray or None
         The x-values of the spectrum. Must have the same shape as the y-values.
-    y : numpy.ndarray or None
+    _y : numpy.ndarray or None
         The y-values of the spectrum. Must have the same shape as the x-values.
     _metadata : dict or None
         Optional metadata associated with the spectrum.
@@ -31,14 +31,17 @@ class Spectrum(SpectrumBase):
         metadata: Metadata | dict | None = None
     ):
         super().__init__(metadata=metadata)
-        self._x: np.ndarray | None = None
-        self._y: np.ndarray | None = None
+        self._x: np.ndarray = np.asarray(x)
+        self._y: np.ndarray = np.asarray(y)
+        self._check_dimensions(self._x, self._y)
 
-        self.x = x
-        self.y = y
+    @staticmethod
+    def _check_dimensions(x: np.ndarray, y: np.ndarray) -> None:
+        if x.shape != y.shape:
+            raise DimensionError("Dimensions of x and y must match")
 
     @property
-    def x(self) -> np.ndarray | None:
+    def x(self) -> np.ndarray:
         """
         Gets the value of the x attribute.
 
@@ -72,8 +75,7 @@ class Spectrum(SpectrumBase):
             (when '_y' is not None).
         """
         value = np.asarray(value)
-        if self._y is not None and value.shape != self._y.shape:
-            raise DimensionError("Dimensions of x and y must match")
+        self._check_dimensions(self._y, value)
         self._x = value
 
     @property
@@ -109,8 +111,7 @@ class Spectrum(SpectrumBase):
             If the dimensions of `x` and the provided `value` do not match.
         """
         value = np.asarray(value)
-        if self._x is not None and value.shape[0] != self._x.shape[0]:
-            raise DimensionError("Dimensions of x and y must match")
+        self._check_dimensions(self._x, value)
         self._y = value
 
     def set_data(self,  x: np.ndarray | list, y: np.ndarray | list) -> None:
@@ -133,8 +134,7 @@ class Spectrum(SpectrumBase):
         """
         x = np.asarray(x)
         y = np.asarray(y)
-        if x.shape != y.shape:
-            raise DimensionError("Dimensions of x and y must match")
+        self._check_dimensions(x, y)
         self._x = x
         self._y = y
 
@@ -147,6 +147,4 @@ class Spectrum(SpectrumBase):
         int
             The length of `_x` if `_x` and `_y` are not `None`, otherwise 0.
         """
-        if self._x is None or self._y is None:
-            return 0
         return len(self._x)
