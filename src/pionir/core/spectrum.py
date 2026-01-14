@@ -1,8 +1,8 @@
 import numpy as np
 
-from ..core.base import SpectrumBase
-from ..core.exceptions import DimensionError
-from ..core.metadata import Metadata
+from .base import SpectrumBase
+from .metadata import Metadata
+from .utils import validate_dimensions_1d
 
 
 class Spectrum(SpectrumBase):
@@ -33,12 +33,7 @@ class Spectrum(SpectrumBase):
         super().__init__(metadata=metadata)
         self._x: np.ndarray = np.asarray(x)
         self._y: np.ndarray = np.asarray(y)
-        self._check_dimensions(self._x, self._y)
-
-    @staticmethod
-    def _check_dimensions(x: np.ndarray, y: np.ndarray) -> None:
-        if x.shape != y.shape:
-            raise DimensionError("Dimensions of x and y must match")
+        validate_dimensions_1d(self._x, self._y)
 
     @property
     def x(self) -> np.ndarray:
@@ -74,7 +69,7 @@ class Spectrum(SpectrumBase):
             (when '_y' is not None).
         """
         value = np.asarray(value)
-        self._check_dimensions(self._y, value)
+        validate_dimensions_1d(self._y, value)
         self._x = value
 
     @property
@@ -109,7 +104,7 @@ class Spectrum(SpectrumBase):
             If the dimensions of `x` and the provided `value` do not match.
         """
         value = np.asarray(value)
-        self._check_dimensions(self._x, value)
+        validate_dimensions_1d(self._x, value)
         self._y = value
 
     def set_data(self,  x: np.ndarray | list, y: np.ndarray | list) -> None:
@@ -132,7 +127,7 @@ class Spectrum(SpectrumBase):
         """
         x = np.asarray(x)
         y = np.asarray(y)
-        self._check_dimensions(x, y)
+        validate_dimensions_1d(x, y)
         self._x = x
         self._y = y
 
