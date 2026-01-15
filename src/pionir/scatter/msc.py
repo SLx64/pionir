@@ -5,8 +5,8 @@ import numpy as np
 
 from ..core.collection import SpectrumCollection
 from ..core.spectrum import Spectrum
-from ..core.transform import apply_transformation
 from ..core.typing import SpectrumLike
+from ..core.utils import apply_transformation
 from ..sklearn.utils import StatelessTransformer
 
 
