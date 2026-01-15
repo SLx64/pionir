@@ -1,23 +1,11 @@
 from copy import deepcopy
-from typing import Any, Callable, ParamSpec, Protocol, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
 import numpy as np
 
 from .base import SpectrumBase
 
-P = ParamSpec("P")
 S = TypeVar("S", bound=SpectrumBase)
-
-
-class ArrayTransform(Protocol[P]):
-    def __call__(
-        self,
-        data: np.ndarray,
-        *args: P.args,
-        in_place: bool,
-        **kwargs: P.kwargs,
-    ) -> np.ndarray | None:
-        ...
 
 
 def apply_transformation(
