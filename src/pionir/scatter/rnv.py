@@ -56,7 +56,7 @@ def _rnv(
 
 @singledispatch
 def rnv(
-    data: np.ndarray,
+    data: SpectrumLike,
     iqr: tuple[float, float] = (25, 75),
     in_place: bool = False
 ) -> SpectrumLike | None:
@@ -66,7 +66,7 @@ def rnv(
 
     Parameters
     ----------
-    data : np.ndarray
+    data : SpectrumLike
         The input data to be normalized. Typically, this is a multidimensional
         data structure or array representing signals or spectra.
     iqr : tuple of float, optional
