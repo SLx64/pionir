@@ -51,8 +51,13 @@ def _savgol(
         The filtered data or its derivative as a new array if `in_place`
         is False. None is returned if `in_place` is True, in which case the
         input array `data` is modified directly.
+
+    Notes
+    -----
+    If the input data is multidimensional, the filter is applied along the
+    last axis (axis=-1).
     """
-    res = savgol_filter(data, window_length, polyorder, deriv=deriv)
+    res = savgol_filter(data, window_length, polyorder, deriv=deriv, axis=-1)
     if in_place:
         data[:] = res
         return None

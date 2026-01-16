@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import pytest
 from scipy.signal import savgol_filter
@@ -13,10 +15,12 @@ def test_savgol_ndarray_1d():
     polyorder = 2
     
     result = savgol(data, window_length=window_length, polyorder=polyorder)
-    expected = savgol_filter(data, window_length=window_length, polyorder=polyorder)
+    expected = savgol_filter(
+        data, window_length=window_length, polyorder=polyorder
+    )
     
     assert result is not None
-    assert np.allclose(result, expected)
+    assert np.allclose(cast(np.ndarray, result), expected)
 
 
 def test_savgol_ndarray_2d():
@@ -28,10 +32,16 @@ def test_savgol_ndarray_2d():
     polyorder = 2
     
     result = savgol(data, window_length=window_length, polyorder=polyorder)
-    expected = savgol_filter(data, window_length=window_length, polyorder=polyorder)
+    
+    # Check that each row is smoothed separately
+    expected = np.zeros_like(data)
+    for i in range(data.shape[0]):
+        expected[i] = savgol_filter(
+            data[i], window_length=window_length, polyorder=polyorder
+        )
     
     assert result is not None
-    assert np.allclose(result, expected)
+    assert np.allclose(cast(np.ndarray, result), expected)
 
 
 def test_savgol_deriv():
@@ -40,11 +50,15 @@ def test_savgol_deriv():
     polyorder = 2
     deriv = 1
     
-    result = savgol(data, window_length=window_length, polyorder=polyorder, deriv=deriv)
-    expected = savgol_filter(data, window_length=window_length, polyorder=polyorder, deriv=deriv)
+    result = savgol(
+        data, window_length=window_length, polyorder=polyorder, deriv=deriv
+    )
+    expected = savgol_filter(
+        data, window_length=window_length, polyorder=polyorder, deriv=deriv
+    )
     
     assert result is not None
-    assert np.allclose(result, expected)
+    assert np.allclose(cast(np.ndarray, result), expected)
 
 
 def test_savgol_in_place():
@@ -53,8 +67,12 @@ def test_savgol_in_place():
     window_length = 5
     polyorder = 2
     
-    expected = savgol_filter(data_copy, window_length=window_length, polyorder=polyorder)
-    result = savgol(data, window_length=window_length, polyorder=polyorder, in_place=True)
+    expected = savgol_filter(
+        data_copy, window_length=window_length, polyorder=polyorder
+    )
+    result = savgol(
+        data, window_length=window_length, polyorder=polyorder, in_place=True
+    )
     
     assert result is None
     assert np.allclose(data, expected)
@@ -68,8 +86,12 @@ def test_savgol_spectrum(sample_spectrum):
     if len(sample_spectrum.y) < window_length:
         pytest.skip("Sample spectrum too short for test")
 
-    expected_y = savgol_filter(sample_spectrum.y, window_length=window_length, polyorder=polyorder)
-    result = savgol(sample_spectrum, window_length=window_length, polyorder=polyorder)
+    expected_y = savgol_filter(
+        sample_spectrum.y, window_length=window_length, polyorder=polyorder
+    )
+    result = savgol(
+        sample_spectrum, window_length=window_length, polyorder=polyorder
+    )
     
     assert isinstance(result, Spectrum)
     assert np.allclose(result.y, expected_y)
@@ -83,8 +105,15 @@ def test_savgol_spectrum_in_place(sample_spectrum):
     if len(sample_spectrum.y) < window_length:
         pytest.skip("Sample spectrum too short for test")
 
-    expected_y = savgol_filter(sample_spectrum.y, window_length=window_length, polyorder=polyorder)
-    result = savgol(sample_spectrum, window_length=window_length, polyorder=polyorder, in_place=True)
+    expected_y = savgol_filter(
+        sample_spectrum.y, window_length=window_length, polyorder=polyorder
+    )
+    result = savgol(
+        sample_spectrum,
+        window_length=window_length,
+        polyorder=polyorder,
+        in_place=True
+    )
     
     assert result is None
     assert np.allclose(sample_spectrum.y, expected_y)
@@ -97,8 +126,12 @@ def test_savgol_collection(sample_collection):
     if sample_collection.y.shape[1] < window_length:
         pytest.skip("Sample collection spectra too short for test")
 
-    expected_y = savgol_filter(sample_collection.y, window_length=window_length, polyorder=polyorder)
-    result = savgol(sample_collection, window_length=window_length, polyorder=polyorder)
+    expected_y = savgol_filter(
+        sample_collection.y, window_length=window_length, polyorder=polyorder
+    )
+    result = savgol(
+        sample_collection, window_length=window_length, polyorder=polyorder
+    )
     
     assert isinstance(result, SpectrumCollection)
     assert np.allclose(result.y, expected_y)
@@ -112,8 +145,15 @@ def test_savgol_collection_in_place(sample_collection):
     if sample_collection.y.shape[1] < window_length:
         pytest.skip("Sample collection spectra too short for test")
 
-    expected_y = savgol_filter(sample_collection.y, window_length=window_length, polyorder=polyorder)
-    result = savgol(sample_collection, window_length=window_length, polyorder=polyorder, in_place=True)
+    expected_y = savgol_filter(
+        sample_collection.y, window_length=window_length, polyorder=polyorder
+    )
+    result = savgol(
+        sample_collection,
+        window_length=window_length,
+        polyorder=polyorder,
+        in_place=True
+    )
     
     assert result is None
     assert np.allclose(sample_collection.y, expected_y)
@@ -127,10 +167,14 @@ def test_savgol_transformer():
     window_length = 5
     polyorder = 2
     
-    transformer = SGFTransformer(window_length=window_length, polyorder=polyorder)
+    transformer = SGFTransformer(
+        window_length=window_length, polyorder=polyorder
+    )
     transformed = transformer.fit_transform(data)
     
-    expected = savgol_filter(data, window_length=window_length, polyorder=polyorder)
+    expected = savgol_filter(
+        data, window_length=window_length, polyorder=polyorder
+    )
     assert np.allclose(transformed, expected)
 
 
